@@ -5,7 +5,7 @@
  * A dynamic, browser-based visualization library.
  *
  * @version 4.12.0
- * @date    2016-01-08
+ * @date    2016-01-26
  *
  * @license
  * Copyright (C) 2011-2016 Almende B.V, http://almende.com
@@ -1577,7 +1577,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ function(module, exports, __webpack_require__) {
 
   /* WEBPACK VAR INJECTION */(function(module) {//! moment.js
-  //! version : 2.11.0
+  //! version : 2.11.1
   //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
   //! license : MIT
   //! momentjs.com
@@ -1848,7 +1848,7 @@ return /******/ (function(modules) { // webpackBootstrap
       function loadLocale(name) {
           var oldLocale = null;
           // TODO: Find a better way to register and load all the locales in Node
-          if (!locales[name] && !isUndefined(module) &&
+          if (!locales[name] && (typeof module !== 'undefined') &&
                   module && module.exports) {
               try {
                   oldLocale = globalLocale._abbr;
@@ -2116,13 +2116,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
       // any word (or two) characters or numbers including two/three word month in arabic.
       // includes scottish gaelic two word and hyphenated months
-      var matchWord = /[0-9]*(a[mn]\s?)?['a-z\u00A0-\u05FF\u0700-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF\-]+|[\u0600-\u06FF\/]+(\s*?[\u0600-\u06FF]+){1,2}/i;
+      var matchWord = /[0-9]*['a-z\u00A0-\u05FF\u0700-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]+|[\u0600-\u06FF\/]+(\s*?[\u0600-\u06FF]+){1,2}/i;
 
 
       var regexes = {};
 
       function addRegexToken (token, regex, strictRegex) {
-          regexes[token] = isFunction(regex) ? regex : function (isStrict) {
+          regexes[token] = isFunction(regex) ? regex : function (isStrict, localeData) {
               return (isStrict && strictRegex) ? strictRegex : regex;
           };
       }
@@ -2137,9 +2137,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
       // Code from http://stackoverflow.com/questions/3561493/is-there-a-regexp-escape-function-in-javascript
       function unescapeFormat(s) {
-          return s.replace('\\', '').replace(/\\(\[)|\\(\])|\[([^\]\[]*)\]|\\(.)/g, function (matched, p1, p2, p3, p4) {
+          return regexEscape(s.replace('\\', '').replace(/\\(\[)|\\(\])|\[([^\]\[]*)\]|\\(.)/g, function (matched, p1, p2, p3, p4) {
               return p1 || p2 || p3 || p4;
-          }).replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          }));
+      }
+
+      function regexEscape(s) {
+          return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
       }
 
       var tokens = {};
@@ -2208,8 +2212,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
       addRegexToken('M',    match1to2);
       addRegexToken('MM',   match1to2, match2);
-      addRegexToken('MMM',  matchWord);
-      addRegexToken('MMMM', matchWord);
+      addRegexToken('MMM',  function (isStrict, locale) {
+          return locale.monthsShortRegex(isStrict);
+      });
+      addRegexToken('MMMM', function (isStrict, locale) {
+          return locale.monthsRegex(isStrict);
+      });
 
       addParseToken(['M', 'MM'], function (input, array) {
           array[MONTH] = toInt(input) - 1;
@@ -2234,7 +2242,7 @@ return /******/ (function(modules) { // webpackBootstrap
               this._months[MONTHS_IN_FORMAT.test(format) ? 'format' : 'standalone'][m.month()];
       }
 
-      var defaultLocaleMonthsShort = 'Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sept_Oct_Nov_Dec'.split('_');
+      var defaultLocaleMonthsShort = 'Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec'.split('_');
       function localeMonthsShort (m, format) {
           return isArray(this._monthsShort) ? this._monthsShort[m.month()] :
               this._monthsShort[MONTHS_IN_FORMAT.test(format) ? 'format' : 'standalone'][m.month()];
@@ -2309,6 +2317,72 @@ return /******/ (function(modules) { // webpackBootstrap
           return daysInMonth(this.year(), this.month());
       }
 
+      var defaultMonthsShortRegex = matchWord;
+      function monthsShortRegex (isStrict) {
+          if (this._monthsParseExact) {
+              if (!hasOwnProp(this, '_monthsRegex')) {
+                  computeMonthsParse.call(this);
+              }
+              if (isStrict) {
+                  return this._monthsShortStrictRegex;
+              } else {
+                  return this._monthsShortRegex;
+              }
+          } else {
+              return this._monthsShortStrictRegex && isStrict ?
+                  this._monthsShortStrictRegex : this._monthsShortRegex;
+          }
+      }
+
+      var defaultMonthsRegex = matchWord;
+      function monthsRegex (isStrict) {
+          if (this._monthsParseExact) {
+              if (!hasOwnProp(this, '_monthsRegex')) {
+                  computeMonthsParse.call(this);
+              }
+              if (isStrict) {
+                  return this._monthsStrictRegex;
+              } else {
+                  return this._monthsRegex;
+              }
+          } else {
+              return this._monthsStrictRegex && isStrict ?
+                  this._monthsStrictRegex : this._monthsRegex;
+          }
+      }
+
+      function computeMonthsParse () {
+          function cmpLenRev(a, b) {
+              return b.length - a.length;
+          }
+
+          var shortPieces = [], longPieces = [], mixedPieces = [],
+              i, mom;
+          for (i = 0; i < 12; i++) {
+              // make the regex if we don't have it already
+              mom = create_utc__createUTC([2000, i]);
+              shortPieces.push(this.monthsShort(mom, ''));
+              longPieces.push(this.months(mom, ''));
+              mixedPieces.push(this.months(mom, ''));
+              mixedPieces.push(this.monthsShort(mom, ''));
+          }
+          // Sorting makes sure if one month (or abbr) is a prefix of another it
+          // will match the longer piece.
+          shortPieces.sort(cmpLenRev);
+          longPieces.sort(cmpLenRev);
+          mixedPieces.sort(cmpLenRev);
+          for (i = 0; i < 12; i++) {
+              shortPieces[i] = regexEscape(shortPieces[i]);
+              longPieces[i] = regexEscape(longPieces[i]);
+              mixedPieces[i] = regexEscape(mixedPieces[i]);
+          }
+
+          this._monthsRegex = new RegExp('^(' + mixedPieces.join('|') + ')', 'i');
+          this._monthsShortRegex = this._monthsRegex;
+          this._monthsStrictRegex = new RegExp('^(' + longPieces.join('|') + ')$', 'i');
+          this._monthsShortStrictRegex = new RegExp('^(' + shortPieces.join('|') + ')$', 'i');
+      }
+
       function checkOverflow (m) {
           var overflow;
           var a = m._a;
@@ -2340,7 +2414,8 @@ return /******/ (function(modules) { // webpackBootstrap
       }
 
       function warn(msg) {
-          if (utils_hooks__hooks.suppressDeprecationWarnings === false && !isUndefined(console) && console.warn) {
+          if (utils_hooks__hooks.suppressDeprecationWarnings === false &&
+                  (typeof console !==  'undefined') && console.warn) {
               console.warn('Deprecation warning: ' + msg);
           }
       }
@@ -2508,6 +2583,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
       // FORMATTING
 
+      addFormatToken('Y', 0, 0, function () {
+          var y = this.year();
+          return y <= 9999 ? '' + y : '+' + y;
+      });
+
       addFormatToken(0, ['YY', 2], 0, function () {
           return this.year() % 100;
       });
@@ -2534,6 +2614,9 @@ return /******/ (function(modules) { // webpackBootstrap
       });
       addParseToken('YY', function (input, array) {
           array[YEAR] = utils_hooks__hooks.parseTwoDigitYear(input);
+      });
+      addParseToken('Y', function (input, array) {
+          array[YEAR] = parseInt(input, 10);
       });
 
       // HELPERS
@@ -2786,6 +2869,8 @@ return /******/ (function(modules) { // webpackBootstrap
           for (i = 0; i < tokens.length; i++) {
               token = tokens[i];
               parsedInput = (string.match(getParseRegexForToken(token, config)) || [])[0];
+              // console.log('token', token, 'parsedInput', parsedInput,
+              //         'regex', getParseRegexForToken(token, config));
               if (parsedInput) {
                   skipped = string.substr(0, string.indexOf(parsedInput));
                   if (skipped.length > 0) {
@@ -3061,8 +3146,8 @@ return /******/ (function(modules) { // webpackBootstrap
           return pickBy('isAfter', args);
       }
 
-      var now = Date.now || function () {
-          return +(new Date());
+      var now = function () {
+          return Date.now ? Date.now() : +(new Date());
       };
 
       function Duration (duration) {
@@ -4620,11 +4705,15 @@ return /******/ (function(modules) { // webpackBootstrap
       prototype__proto.set             = locale_set__set;
 
       // Month
-      prototype__proto.months       =        localeMonths;
-      prototype__proto._months      = defaultLocaleMonths;
-      prototype__proto.monthsShort  =        localeMonthsShort;
-      prototype__proto._monthsShort = defaultLocaleMonthsShort;
-      prototype__proto.monthsParse  =        localeMonthsParse;
+      prototype__proto.months            =        localeMonths;
+      prototype__proto._months           = defaultLocaleMonths;
+      prototype__proto.monthsShort       =        localeMonthsShort;
+      prototype__proto._monthsShort      = defaultLocaleMonthsShort;
+      prototype__proto.monthsParse       =        localeMonthsParse;
+      prototype__proto._monthsRegex      = defaultMonthsRegex;
+      prototype__proto.monthsRegex       = monthsRegex;
+      prototype__proto._monthsShortRegex = defaultMonthsShortRegex;
+      prototype__proto.monthsShortRegex  = monthsShortRegex;
 
       // Week
       prototype__proto.week = localeWeek;
@@ -4693,9 +4782,6 @@ return /******/ (function(modules) { // webpackBootstrap
       }
 
       locale_locales__getSetGlobalLocale('en', {
-          monthsParse : [/^jan/i, /^feb/i, /^mar/i, /^apr/i, /^may/i, /^jun/i, /^jul/i, /^aug/i, /^sep/i, /^oct/i, /^nov/i, /^dec/i],
-          longMonthsParse : [/^january$/i, /^february$/i, /^march$/i, /^april$/i, /^may$/i, /^june$/i, /^july$/i, /^august$/i, /^september$/i, /^october$/i, /^november$/i, /^december$/i],
-          shortMonthsParse : [/^jan$/i, /^feb$/i, /^mar$/i, /^apr$/i, /^may$/i, /^jun$/i, /^jul$/i, /^aug/i, /^sept?$/i, /^oct$/i, /^nov$/i, /^dec$/i],
           ordinalParse: /\d{1,2}(th|st|nd|rd)/,
           ordinal : function (number) {
               var b = number % 10,
@@ -5063,7 +5149,7 @@ return /******/ (function(modules) { // webpackBootstrap
       // Side effect imports
 
 
-      utils_hooks__hooks.version = '2.11.0';
+      utils_hooks__hooks.version = '2.11.1';
 
       setHookCallback(local__createLocal);
 
@@ -11209,10 +11295,11 @@ return /******/ (function(modules) { // webpackBootstrap
         // propagate over all elements (until stopped)
         var elem = _firstTarget;
         while (elem && !stopped) {
-          if(elem.hammer){
+          var elemHammer = elem.hammer;
+          if(elemHammer){
             var _handlers;
-            for(var k = 0; k < elem.hammer.length; k++){
-              _handlers = elem.hammer[k]._handlers[event.type];
+            for(var k = 0; k < elemHammer.length; k++){
+              _handlers = elemHammer[k]._handlers[event.type];
               if(_handlers) for (var i = 0; i < _handlers.length && !stopped; i++) {
                 _handlers[i](event);
               }
@@ -18902,6 +18989,18 @@ return /******/ (function(modules) { // webpackBootstrap
     return this.props.label.width;
   };
 
+  Group.prototype.callConfiguredStack = function (stackOption, items, margin, restack, subgroups) {
+    if (stackOption || stackOption !== 'nostack') {
+      if (stackOption === 'stackadjacent') {
+        stack.stackadjacent(items, margin, restack);
+      } else {
+        stack.stack(items, margin, restack);
+      }
+    } else {
+      stack.nostack(items, margin, subgroups);
+    }
+  };
+
   /**
    * Repaint this group
    * @param {{start: number, end: number}} range
@@ -18951,7 +19050,7 @@ return /******/ (function(modules) { // webpackBootstrap
         var customOrderedItems = this.orderedItems.byStart.slice().sort(function (a, b) {
           return me.itemSet.options.order(a.data, b.data);
         });
-        stack.stack(customOrderedItems, margin, true /* restack=true */);
+        this.callConfiguredStack(!this.itemSet.options.stack ? true : this.itemSet.options.stack, customOrderedItems, margin, true, /* restack = true */null /* should never be accessed*/);
       }
 
       this.visibleItems = this._updateVisibleItems(this.orderedItems, this.visibleItems, range);
@@ -18959,13 +19058,7 @@ return /******/ (function(modules) { // webpackBootstrap
       // no custom order function, lazy stacking
       this.visibleItems = this._updateVisibleItems(this.orderedItems, this.visibleItems, range);
 
-      if (this.itemSet.options.stack) {
-        // TODO: ugly way to access options...
-        stack.stack(this.visibleItems, margin, restack);
-      } else {
-        // no stacking
-        stack.nostack(this.visibleItems, margin, this.subgroups);
-      }
+      this.callConfiguredStack(this.itemSet.options.stack, this.visibleItems, margin, restack, this.subgroups);
     }
 
     // recalculate the height of the group
@@ -19449,6 +19542,60 @@ return /******/ (function(modules) { // webpackBootstrap
             item.top = collidingItem.top + collidingItem.height + margin.item.vertical;
           }
         } while (collidingItem);
+      }
+    }
+  };
+
+  /**
+   * Adjust vertical positions of the items such that they don't overlap each
+   * other.
+   * @param {Item[]} items
+   *            All visible items
+   * @param {{item: {horizontal: number, vertical: number}, axis: number}} margin
+   *            Margins between items and between items and the axis.
+   * @param {boolean} [force=false]
+   *            If true, all items will be repositioned. If false (default), only
+   *            items having a top===null will be re-stacked
+   */
+  exports.stackadjacent = function (items, margin, force) {
+    //  console.log("Calling stack with length=", items.length, ", force=", force, ", margin=", margin);
+    var i, iMax;
+
+    if (force) {
+      // reset top position of all items
+      for (i = 0, iMax = items.length; i < iMax; i++) {
+        items[i].top = null;
+      }
+    }
+
+    // calculate new, non-overlapping positions
+    for (i = 0, iMax = items.length; i < iMax; i++) {
+      var item = items[i];
+      if (item.stack && item.top === null) {
+        // initialize top position
+        item.top = margin.axis;
+
+        // search previous entries for collision, starting with previous item and continuing to
+        // next previous item in list as long as that one shares the same vertical space as
+        // the last item checked
+        var collidingItem = null;
+        var j = 1;
+        var lastOtherTop = null;
+        var other = null;
+        while (collidingItem == null && i - j >= 0 && (!lastOtherTop || items[i - j].top == lastOtherTop)) {
+          other = items[i - j];
+          item.top = other.top;
+          if (other.stack && exports.collision(item, other, margin.item)) {
+            collidingItem = other;
+          }
+          lastOtherTop = other.top;
+          j++;
+        }
+
+        if (collidingItem != null) {
+          // There is a collision. Reposition the items above the colliding element
+          item.top = collidingItem.top + collidingItem.height + margin.item.vertical;
+        }
       }
     }
   };
@@ -20272,6 +20419,8 @@ return /******/ (function(modules) { // webpackBootstrap
       this._updateContents(this.dom.content);
       this._updateTitle(this.dom.box);
       this._updateDataAttributes(this.dom.box);
+      this._updateDataAttributes(this.dom.dot);
+      this._updateDataAttributes(this.dom.line);
       this._updateStyle(this.dom.box);
 
       var editable = (this.options.editable.updateTime || this.options.editable.updateGroup || this.editable === true) && this.editable !== false;
@@ -23788,9 +23937,9 @@ return /******/ (function(modules) { // webpackBootstrap
       // http://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#JavaScript
       /*
        Copyright (c) 2011 Andrei Mackenzie
-        Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-        The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+         Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+         The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+         THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
        */
     }, {
       key: 'levenshteinDistance',
@@ -23965,7 +24114,7 @@ return /******/ (function(modules) { // webpackBootstrap
     showCurrentTime: { boolean: boolean },
     showMajorLabels: { boolean: boolean },
     showMinorLabels: { boolean: boolean },
-    stack: { boolean: boolean },
+    stack: { string: string, boolean: boolean },
     snap: { 'function': 'function', 'null': 'null' },
     start: { date: date, number: number, string: string, moment: moment },
     template: { 'function': 'function' },
@@ -24056,7 +24205,7 @@ return /******/ (function(modules) { // webpackBootstrap
       showCurrentTime: false,
       showMajorLabels: true,
       showMinorLabels: true,
-      stack: true,
+      stack: 'stack',
       //snap: {'function': 'function', nada},
       start: '',
       //template: {'function': 'function'},
