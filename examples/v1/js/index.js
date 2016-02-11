@@ -530,7 +530,8 @@
          "cssClass":"epic-icon epic-card-svg-icon epic-timeline-svg-icon",
          "color":"seafoam"
       },
-      "group":"group",
+      "group":"group2",
+      "subgroup": "group2-1",
       "className":"timeline-event-content epic  boxshadow  boxborder color-seafoam",
       "canDrillDown":false
    },
@@ -538,8 +539,8 @@
       "OidToken":"Epic:1152",
       "SuperOidToken":null,
       "Name":"Geo Aware Call Routing",
-      "start":"2015-07-07T04:00:00.000Z",
-      "end":"2016-06-05T04:00:00.000Z",
+      "start":"2016-05-07T04:00:00.000Z",
+      "end":"2017-06-05T04:00:00.000Z",
       "HasSubEpics":false,
       "CategoryColorName":"seafoam",
       "RankOrder":-766175853,
@@ -571,7 +572,8 @@
          "cssClass":"epic-icon epic-card-svg-icon epic-timeline-svg-icon",
          "color":"seafoam"
       },
-      "group":"group",
+      "group":"group2",
+      "subgroup": "group2-2",
       "className":"timeline-event-content epic  boxshadow  boxborder color-seafoam",
       "canDrillDown":false
    }
@@ -605,6 +607,17 @@ function sortItems(item1, item2) {
 	  return retVal;
   }
 
+  var groups = new vis.DataSet([
+  {
+   id: "group",
+   "content": "group"
+  },
+  {
+   id: "group2",
+   "content": "group2",
+   stack: false
+  }
+   ])
   var container = document.getElementById('visualization');
  // create a handlebars template
   var template = Handlebars.compile(document.getElementById('epic-template').innerHTML);
@@ -615,8 +628,8 @@ function sortItems(item1, item2) {
     template: template,
     itemsAlwaysDraggable: false,
     order: sortItems,
-    stack: 'stackadjacent'
+    stack: 'stackadjacent',
   };
 
 
-  var timeline = new vis.Timeline(container, items, options);
+  var timeline = new vis.Timeline(container, items, groups, options);
