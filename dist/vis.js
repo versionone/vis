@@ -5,7 +5,7 @@
  * A dynamic, browser-based visualization library.
  *
  * @version 4.12.0
- * @date    2016-02-11
+ * @date    2016-02-12
  *
  * @license
  * Copyright (C) 2011-2016 Almende B.V, http://almende.com
@@ -19028,7 +19028,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
     // recalculate the height of the subgroups
     this._calculateSubGroupHeights();
-    var itemsetStack = !this.itemSet.options.stack ? true : this.itemSet.options.stack;
+    var itemsetStack = this.itemSet.options.stack === null || this.itemSet.options.stack === undefined ? true : this.itemSet.options.stack;
     var stack = this.stackOption === undefined ? itemsetStack : this.stackOption;
 
     // reposition visible items vertically
@@ -19060,7 +19060,7 @@ return /******/ (function(modules) { // webpackBootstrap
     } else {
       // no custom order function, lazy stacking
       this.visibleItems = this._updateVisibleItems(this.orderedItems, this.visibleItems, range);
-
+      console.log("Calling with the subgroup");
       this.callConfiguredStack(stack, this.visibleItems, margin, restack, this.subgroups);
     }
 
