@@ -7,7 +7,7 @@
   "license": ["Apache-2.0", "MIT"],
   "repository": {
     "type": "git",
-    "url": "git://github.com/almende/vis.git"
+    "url": "git://github.com/versionone/vis.git"
   },
   "ignore": [
     "misc",
