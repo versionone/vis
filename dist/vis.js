@@ -5,7 +5,7 @@
  * A dynamic, browser-based visualization library.
  *
  * @version 4.12.0
- * @date    2016-02-15
+ * @date    2016-02-18
  *
  * @license
  * Copyright (C) 2011-2016 Almende B.V, http://almende.com
@@ -10474,11 +10474,38 @@ return /******/ (function(modules) { // webpackBootstrap
    *                                    provided to specify duration and easing function.
    *                                    Default duration is 500 ms, and default easing
    *                                    function is 'easeInOutQuad'.
+   *                                 `zoomMax: number (milliseconds)`
+   *                                 `zoomMin: number (milliseconds)`
    */
   Timeline.prototype.fit = function (options) {
     var animation = options && options.animation !== undefined ? options.animation : true;
     var range = this.getItemRange();
+    if (animation && (options.zoomMax || options.zoomMin)) {
+      if (console.log) {
+        console.log("Local zoom max and zoom min passed in as options to Timeline.fit() will not apply if fit is called with animation set to true.");
+      }
+    }
+    if (!animation) {
+      var prevZoomMax = this.range.options.zoomMax;
+      var prevZoomMin = this.range.options.zoomMin;
+      if (options.zoomMax) {
+        this.range.options.zoomMax = options.zoomMax;
+      }
+      if (options.zoomMin) {
+        this.range.options.zoomMin = options.zoomMin;
+      }
+    }
+
     this.range.setRange(range.min, range.max, animation);
+    // restore previous zoom
+    if (!animation) {
+      if (this.range.options.zoomMax === options.zoomMax) {
+        this.range.options.zoomMax = prevZoomMax;
+      }
+      if (this.range.options.zoomMin === options.zoomMin) {
+        this.range.options.zoomMin = prevZoomMin;
+      }
+    }
   };
 
   /**
