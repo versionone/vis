@@ -5,7 +5,7 @@
  * A dynamic, browser-based visualization library.
  *
  * @version 4.21.0
- * @date    2017-11-29
+ * @date    2017-12-21
  *
  * @license
  * Copyright (C) 2011-2017 Almende B.V, http://almende.com
@@ -1912,9 +1912,7 @@ function hammerMock() {
 if (typeof window !== 'undefined') {
   var propagating = __webpack_require__(175);
   var Hammer = window['Hammer'] || __webpack_require__(176);
-  module.exports = propagating(Hammer, {
-    preventDefault: 'mouse'
-  });
+  module.exports = propagating(Hammer);
 } else {
   module.exports = function () {
     // hammer.js is only available in a browser, not in node.js. Replacing it with a mock object.
@@ -8680,7 +8678,7 @@ Range.prototype.stopRolling = function () {
  *                                    function is 'easeInOutQuad'.
  *                              {boolean} [byUser=false]
  *                              {Event}  event  Mouse event
- * @param {Function} callback     a callback function to be executed at the end of this function  
+ * @param {Function} callback     a callback function to be executed at the end of this function
  * @param {Function} frameCallback    a callback function executed each frame of the range animation.
  *                                    The callback will be passed three parameters:
  *                                    {number} easeCoefficient    an easing coefficent
@@ -9172,7 +9170,7 @@ Range.prototype._onTouch = function (event) {
   this.scaleOffset = 0;
   this.deltaDifference = 0;
   // Disable the browser default handling of this event.
-  util.preventDefault(event);
+  // util.preventDefault(event);
 };
 
 /**
